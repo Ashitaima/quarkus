@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+// Пакет, який Quarkus згенерує для Java коду
+option java_package = "com.dronedelivery.management.grpc";
+option java_multiple_files = true;
+
+// Назва нашого gRPC сервісу
+service DroneService {
+  // Метод для пошуку вільного дрона
+  rpc FindAvailableDrone (FindDroneRequest) returns (DroneResponse);
+}
+
+// Запит (поки що порожній, бо нам потрібен просто будь-який вільний дрон)
+message FindDroneRequest {
+}
+
+// Відповідь, що містить інформацію про знайденого дрона
+message DroneResponse {
+  string id = 1;
+  int32 batteryLevel = 2;
+}
+
+// Повідомлення про те, що дрона не знайдено
+message NoDroneAvailable {
+  string message = 1;
+}
