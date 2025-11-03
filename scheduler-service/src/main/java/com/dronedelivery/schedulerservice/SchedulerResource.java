@@ -24,12 +24,12 @@ public class SchedulerResource {
     @GrpcClient("drone-service")
     DroneService droneService;
 
-    // 2. НОВЕ: Ін'єкція REST-клієнта для OrderService
+    // 2. Ін'єкція REST-клієнта для OrderService
     @Inject
     @RestClient // Позначаємо, що це REST-клієнт
             OrderServiceClient orderServiceClient;
 
-    // 3. НОВЕ: Ін'єкція REST-клієнта для NotificationService
+    // 3. Ін'єкція REST-клієнта для NotificationService
     @Inject
     @RestClient
     NotificationServiceClient notificationServiceClient;
@@ -45,13 +45,13 @@ public class SchedulerResource {
         // Створюємо gRPC запит
         FindDroneRequest request = FindDroneRequest.newBuilder().build();
 
-        // 4. ОНОВЛЕНА ЛОГІКА: Ми об'єднуємо кілька асинхронних викликів
+        // 4. Об'єднуємо кілька асинхронних викликів
         return droneService.findAvailableDrone(request)
                 .onItem().transformToUni(droneResponse -> {
                     // Цей код виконається, якщо gRPC виклик УСПІШНИЙ (дрон знайдено)
                     System.out.println("Scheduler: 2. Дрон знайдено: " + droneResponse.getId());
 
-                    // 5. НОВИЙ КРОК: Створюємо запити для REST-викликів
+                    // 5. Створюємо запити для REST-викликів
 
                     // Створюємо запит на оновлення статусу замовлення
                     Uni<Void> updateOrderUni = orderServiceClient.updateOrderStatus(orderId, OrderStatus.SCHEDULED);
@@ -63,7 +63,7 @@ public class SchedulerResource {
 
                     System.out.println("Scheduler: 3. Звертаюсь до order-service та notification-service (REST)...");
 
-                    // 6. НОВИЙ КРОК: Об'єднуємо обидва REST-виклики
+                    // 6. Об'єднуємо обидва REST-виклики
                     // Uni.combine().all().unis() ... .discardItems()
                     // Це дозволяє виконати обидва виклики паралельно
                     // і продовжити, лише коли ОБИДВА завершаться успішно

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - Drone Delivery System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .nav {
+            margin-top: 15px;
+        }
+
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            transition: background 0.3s ease;
+        }
+
+        .nav a:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .notification-list {
+            margin-top: 30px;
+        }
+
+        .notification-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .notification-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .notification-icon {
+            font-size: 2rem;
+            margin-right: 20px;
+            flex-shrink: 0;
+        }
+
+        .notification-content {
+            flex-grow: 1;
+        }
+
+        .notification-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .notification-message {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .notification-time {
+            font-size: 0.9rem;
+            color: #999;
+        }
+
+        .notification-type {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .type-info {
+            background: #2196F3;
+            color: white;
+        }
+
+        .type-success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .type-warning {
+            background: #ff9800;
+            color: white;
+        }
+
+        .type-error {
+            background: #f44336;
+            color: white;
+        }
+
+        .user-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔔 Notifications</h1>
+            <div class="user-info">
+                <span>User: {userName}</span>
+            </div>
+            <div class="nav">
+                <a href="/">🏠 Home</a>
+                <a href="/drones">🚁 Drones</a>
+                <a href="/orders">📦 Orders</a>
+                <a href="/logout">🚪 Logout</a>
+            </div>
+        </div>
+
+        <div class="content">
+            <h2>System Notifications</h2>
+
+            <div id="notificationList" class="notification-list">
+                <div class="loading">Loading notifications...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch notification data from notification service
+        fetch('/api/notifications')
+            .then(response => response.json())
+            .then(notifications => \{
+                const notificationList = document.getElementById('notificationList');
+                if (notifications && notifications.length > 0) \{
+                    notificationList.innerHTML = notifications.map(notif => \`
+                        <div class="notification-card">
+                            <div class="notification-icon">
+                                \$\{notif.type === 'success' ? '✅' :
+                                  notif.type === 'warning' ? '⚠️' :
+                                  notif.type === 'error' ? '❌' : 'ℹ️'\}
+                            </div>
+                            <div class="notification-content">
+                                <div class="notification-title">\$\{notif.title || 'Notification'\}</div>
+                                <div class="notification-message">\$\{notif.message || 'No message'\}</div>
+                                <div class="notification-time">\$\{notif.timestamp || new Date().toLocaleString()\}</div>
+                                <span class="notification-type type-\$\{notif.type || 'info'\}">
+                                    \$\{(notif.type || 'info').toUpperCase()\}
+                                </span>
+                            </div>
+                        </div>
+                    \`).join('');
+                \} else \{
+                    notificationList.innerHTML = '<div class="loading">No notifications available</div>';
+                \}
+            \})
+            .catch(error => \{
+                console.error('Error fetching notifications:', error);
+                document.getElementById('notificationList').innerHTML =
+                    '<div class="loading">Error loading notifications. Please try again later.</div>';
+            \});
+    </script>
+</body>
+</html>
+

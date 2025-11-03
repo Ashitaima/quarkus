@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Management - Drone Delivery System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .nav {
+            margin-top: 15px;
+        }
+
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin-right: 20px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            transition: background 0.3s ease;
+        }
+
+        .nav a:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .drone-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .drone-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .drone-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .drone-status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .status-available {
+            background: #4caf50;
+            color: white;
+        }
+
+        .status-busy {
+            background: #ff9800;
+            color: white;
+        }
+
+        .status-maintenance {
+            background: #f44336;
+            color: white;
+        }
+
+        .user-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚁 Drone Management</h1>
+            <div class="user-info">
+                <span>User: {userName}</span>
+            </div>
+            <div class="nav">
+                <a href="/">🏠 Home</a>
+                <a href="/orders">📦 Orders</a>
+                <a href="/notifications">🔔 Notifications</a>
+                <a href="/logout">🚪 Logout</a>
+            </div>
+        </div>
+
+        <div class="content">
+            <h2>Drone Fleet Status</h2>
+
+            <div id="droneList" class="drone-grid">
+                <div class="loading">Loading drone data...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Fetch drone data from management service
+        fetch('/api/management/drones')
+            .then(response => response.json())
+            .then(drones => \{
+                const droneList = document.getElementById('droneList');
+                if (drones && drones.length > 0) \{
+                    droneList.innerHTML = drones.map(drone => \`
+                        <div class="drone-card">
+                            <h3>🚁 Drone \$\{drone.id || 'N/A'\}</h3>
+                            <p><strong>Model:</strong> \$\{drone.model || 'Unknown'\}</p>
+                            <p><strong>Location:</strong> \$\{drone.latitude || 0\}, \$\{drone.longitude || 0\}</p>
+                            <p><strong>Battery:</strong> \$\{drone.batteryLevel || 0\}%</p>
+                            <span class="drone-status status-\$\{(drone.status || 'available').toLowerCase()\}">
+                                \$\{drone.status || 'AVAILABLE'\}
+                            </span>
+                        </div>
+                    \`).join('');
+                \} else \{
+                    droneList.innerHTML = '<div class="loading">No drones available</div>';
+                \}
+            \})
+            .catch(error => \{
+                console.error('Error fetching drones:', error);
+                document.getElementById('droneList').innerHTML =
+                    '<div class="loading">Error loading drone data. Please try again later.</div>';
+            \});
+    </script>
+</body>
+</html>
+
