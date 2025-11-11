@@ -3,34 +3,29 @@ package com.dronedelivery.managementservice; // Або ваш пакет, де �
 import com.dronedelivery.management.grpc.*; // Імпорт згенерованих класів
 import io.quarkus.grpc.GrpcService;
 import io.smallrye.mutiny.Uni; // Uni - це реактивний тип Quarkus
-import jakarta.inject.Inject; // Для ін'єкції репозиторію
-
-import java.util.Optional;
+import jakarta.transaction.Transactional;
 
 @GrpcService // Позначає цей клас як gRPC сервіс
 public class DroneGrpcService implements DroneService { // Імплементує згенерований інтерфейс
 
-    @Inject // Впроваджуємо наш фейковий репозиторій
-    DroneRepository droneRepository;
-
     @Override
+    @Transactional
     public Uni<DroneResponse> findAvailableDrone(FindDroneRequest request) {
         System.out.println("gRPC: Отримано запит на пошук вільного дрона...");
 
-        // Шукаємо дрона в репозиторії
-        Optional<Drone> freeDroneOpt = droneRepository.findFreeDrone();
+        // Шукаємо дрона в базі даних
+        Drone drone = Drone.findFreeDrone();
 
-        if (freeDroneOpt.isPresent()) {
-            Drone drone = freeDroneOpt.get();
-
+        if (drone != null) {
             // Змінюємо його статус (імітація "бронювання")
-            droneRepository.updateStatus(drone.id, DroneStatus.DELIVERING);
+            drone.status = DroneStatus.IN_FLIGHT;
+            drone.persist();
 
             System.out.println("gRPC: Знайдено дрон: " + drone.id);
 
             // Створюємо відповідь
             DroneResponse response = DroneResponse.newBuilder()
-                    .setId(drone.id)
+                    .setId(String.valueOf(drone.id))
                     .setBatteryLevel(drone.batteryLevel)
                     .build();
 

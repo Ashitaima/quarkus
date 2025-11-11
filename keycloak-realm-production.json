@@ -61,12 +61,17 @@
       "description": "Web UI service",
       "enabled": true,
       "clientAuthenticatorType": "client-secret",
-      "secret": "**********",
+      "secret": "vt1Ptaaa37RrvBpd7DzXpJDNa2x1H4iT",
       "redirectUris": [
         "http://localhost:8080/*"
       ],
       "webOrigins": [
         "http://localhost:8080"
+      ],
+      "postLogoutRedirectUris": [
+        "http://localhost:8080/*",
+        "http://localhost:8080",
+        "+"
       ],
       "standardFlowEnabled": true,
       "implicitFlowEnabled": false,
@@ -75,6 +80,8 @@
       "publicClient": false,
       "protocol": "openid-connect",
       "attributes": {
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false",
         "saml.assertion.signature": "false",
         "saml.force.post.binding": "false",
         "saml.multivalued.roles": "false",

@@ -140,6 +140,29 @@
         <div class="content">
             <h2>Delivery Orders</h2>
 
+            <!-- Create Order Form -->
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                <h3 style="margin-bottom: 15px;">➕ Create New Order</h3>
+                <form id="createOrderForm" style="display: grid; gap: 15px; max-width: 600px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Customer Name:</label>
+                        <input type="text" id="customerName" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Destination Address:</label>
+                        <input type="text" id="destination" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Weight (kg):</label>
+                        <input type="number" id="weight" step="0.1" min="0.1" max="10" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <button type="submit" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: bold;">
+                        Create Order
+                    </button>
+                </form>
+                <div id="createOrderMessage" style="margin-top: 15px; padding: 10px; border-radius: 5px;"></div>
+            </div>
+
             <div id="orderList" class="order-list">
                 <div class="loading">Loading order data...</div>
             </div>
@@ -147,33 +170,161 @@
     </div>
 
     <script>
-        // Fetch order data from order service
-        fetch('/api/orders')
-            .then(response => response.json())
-            .then(orders => \{
-                const orderList = document.getElementById('orderList');
-                if (orders && orders.length > 0) \{
-                    orderList.innerHTML = orders.map(order => \`
-                        <div class="order-card">
-                            <h3>📦 Order #\$\{order.id || 'N/A'\}</h3>
-                            <p><strong>Customer:</strong> \$\{order.customerName || 'Unknown'\}</p>
-                            <p><strong>Destination:</strong> \$\{order.destination || 'N/A'\}</p>
-                            <p><strong>Weight:</strong> \$\{order.weight || 0\} kg</p>
-                            <p><strong>Created:</strong> \$\{order.createdAt || 'N/A'\}</p>
-                            <span class="order-status status-\$\{(order.status || 'pending').toLowerCase()\}">
-                                \$\{order.status || 'PENDING'\}
-                            </span>
-                        </div>
-                    \`).join('');
-                \} else \{
-                    orderList.innerHTML = '<div class="loading">No orders available</div>';
-                \}
-            \})
-            .catch(error => \{
-                console.error('Error fetching orders:', error);
-                document.getElementById('orderList').innerHTML =
-                    '<div class="loading">Error loading order data. Please try again later.</div>';
-            \});
+        // Function to load orders
+        function loadOrders() {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(function() { controller.abort(); }, 5000);
+
+            fetch('/api/orders', { signal: controller.signal })
+                .then(function(response) {
+                    clearTimeout(timeoutId);
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(function(orders) {
+                    const orderList = document.getElementById('orderList');
+                    if (orders && orders.length > 0) {
+                        orderList.innerHTML = orders.map(function(order) {
+                            return '<div class="order-card" id="order-' + order.id + '">' +
+                                '<h3>📦 Order #' + (order.id || 'N/A') + '</h3>' +
+                                '<p><strong>Customer:</strong> ' + (order.customerName || 'Unknown') + '</p>' +
+                                '<p><strong>Destination:</strong> ' + (order.destination || 'N/A') + '</p>' +
+                                '<p><strong>Weight:</strong> ' + (order.weight || 0) + ' kg</p>' +
+                                '<p><strong>Created:</strong> ' + (order.createdAt || 'N/A') + '</p>' +
+                                '<span class="order-status status-' + (order.status || 'pending').toLowerCase() + '">' +
+                                    (order.status || 'PENDING') +
+                                '</span>' +
+                                '<div style="margin-top: 15px;">' +
+                                    '<button onclick="editOrder(' + order.id + ', \'' + (order.customerName || '') + '\', \'' + (order.destination || '') + '\', ' + (order.weight || 0) + ', \'' + (order.status || 'PENDING') + '\')" style="padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px;">Edit</button>' +
+                                    '<button onclick="deleteOrder(' + order.id + ')" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">Delete</button>' +
+                                '</div>' +
+                            '</div>';
+                        }).join('');
+                    } else {
+                        orderList.innerHTML = '<div class="loading">No orders available</div>';
+                    }
+                })
+                .catch(function(error) {
+                    clearTimeout(timeoutId);
+                    console.error('Error fetching orders:', error);
+                    const orderList = document.getElementById('orderList');
+                    orderList.innerHTML = '<div class="loading" style="color: #f44336;">' +
+                        (error.name === 'AbortError' ?
+                            '⚠️ Request timeout - Order service may not be running' :
+                            '❌ Error loading order data') + '<br>' +
+                        '<small>' + error.message + '</small><br>' +
+                        '<button onclick="loadOrders()" style="margin-top:10px;padding:8px 16px;cursor:pointer;">Retry</button>' +
+                        '</div>';
+                });
+        }
+
+        // Handle create order form submission
+        document.getElementById('createOrderForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const messageDiv = document.getElementById('createOrderMessage');
+            messageDiv.innerHTML = '<div style="color: #2196F3;">Creating order...</div>';
+
+            const orderData = {
+                customerName: document.getElementById('customerName').value,
+                destination: document.getElementById('destination').value,
+                weight: parseFloat(document.getElementById('weight').value),
+                status: 'PENDING'
+            };
+
+            fetch('/api/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Failed to create order');
+                return response.json();
+            })
+            .then(function(data) {
+                messageDiv.innerHTML = '<div style="color: #4caf50; background: #e8f5e9; padding: 10px; border-radius: 5px;">' +
+                    '✅ Order created successfully! ID: ' + (data.id || 'N/A') +
+                    '</div>';
+                document.getElementById('createOrderForm').reset();
+                // Reload orders list
+                setTimeout(loadOrders, 1000);
+            })
+            .catch(function(error) {
+                messageDiv.innerHTML = '<div style="color: #f44336; background: #ffebee; padding: 10px; border-radius: 5px;">' +
+                    '❌ Error creating order: ' + error.message +
+                    '</div>';
+            });
+        });
+
+        // Function to edit order
+        function editOrder(id, customerName, destination, weight, status) {
+            const newCustomerName = prompt('Edit Customer Name:', customerName);
+            if (newCustomerName === null) return;
+
+            const newDestination = prompt('Edit Destination:', destination);
+            if (newDestination === null) return;
+
+            const newWeight = prompt('Edit Weight (kg):', weight);
+            if (newWeight === null) return;
+
+            const newStatus = prompt('Edit Status (PENDING/SCHEDULED/DELIVERED/CANCELED):', status);
+            if (newStatus === null) return;
+
+            const orderData = {
+                customerName: newCustomerName || customerName,
+                destination: newDestination || destination,
+                weight: parseFloat(newWeight) || weight,
+                status: newStatus.toUpperCase() || status
+            };
+
+            fetch('/api/orders/' + id, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Failed to update order');
+                return response.json();
+            })
+            .then(function(data) {
+                alert('Order updated successfully!');
+                loadOrders();
+            })
+            .catch(function(error) {
+                alert('Error updating order: ' + error.message);
+            });
+        }
+
+        // Function to delete order
+        function deleteOrder(id) {
+            if (!confirm('Are you sure you want to delete order #' + id + '?')) {
+                return;
+            }
+
+            fetch('/api/orders/' + id, {
+                method: 'DELETE'
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Failed to delete order');
+                const orderCard = document.getElementById('order-' + id);
+                if (orderCard) {
+                    orderCard.style.opacity = '0';
+                    setTimeout(function() {
+                        orderCard.remove();
+                    }, 300);
+                }
+            })
+            .catch(function(error) {
+                alert('Error deleting order: ' + error.message);
+            });
+        }
+
+        // Load orders on page load
+        loadOrders();
     </script>
 </body>
 </html>

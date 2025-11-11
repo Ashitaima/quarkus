@@ -137,6 +137,45 @@
         <div class="content">
             <h2>Drone Fleet Status</h2>
 
+            <!-- Create Drone Form -->
+            <div style="background: #f5f5f5; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                <h3 style="margin-bottom: 15px;">➕ Add New Drone</h3>
+                <form id="createDroneForm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; max-width: 900px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Model:</label>
+                        <input type="text" id="droneModel" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Status:</label>
+                        <select id="droneStatus" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                            <option value="AVAILABLE">Available</option>
+                            <option value="IN_FLIGHT">In Flight</option>
+                            <option value="CHARGING">Charging</option>
+                            <option value="MAINTENANCE">Maintenance</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Battery Level (%):</label>
+                        <input type="number" id="droneBattery" min="0" max="100" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Latitude:</label>
+                        <input type="number" id="droneLatitude" step="0.0001" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: bold;">Longitude:</label>
+                        <input type="number" id="droneLongitude" step="0.0001" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                    </div>
+                    <div style="display: flex; align-items: flex-end;">
+                        <button type="submit" style="width: 100%; padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1rem; font-weight: bold;">
+                            Add Drone
+                        </button>
+                    </div>
+                </form>
+                <div id="createDroneMessage" style="margin-top: 15px;"></div>
+            </div>
+
+            <h3>All Drones</h3>
             <div id="droneList" class="drone-grid">
                 <div class="loading">Loading drone data...</div>
             </div>
@@ -144,32 +183,164 @@
     </div>
 
     <script>
-        // Fetch drone data from management service
-        fetch('/api/management/drones')
-            .then(response => response.json())
-            .then(drones => \{
-                const droneList = document.getElementById('droneList');
-                if (drones && drones.length > 0) \{
-                    droneList.innerHTML = drones.map(drone => \`
-                        <div class="drone-card">
-                            <h3>🚁 Drone \$\{drone.id || 'N/A'\}</h3>
-                            <p><strong>Model:</strong> \$\{drone.model || 'Unknown'\}</p>
-                            <p><strong>Location:</strong> \$\{drone.latitude || 0\}, \$\{drone.longitude || 0\}</p>
-                            <p><strong>Battery:</strong> \$\{drone.batteryLevel || 0\}%</p>
-                            <span class="drone-status status-\$\{(drone.status || 'available').toLowerCase()\}">
-                                \$\{drone.status || 'AVAILABLE'\}
-                            </span>
-                        </div>
-                    \`).join('');
-                \} else \{
-                    droneList.innerHTML = '<div class="loading">No drones available</div>';
-                \}
-            \})
-            .catch(error => \{
-                console.error('Error fetching drones:', error);
-                document.getElementById('droneList').innerHTML =
-                    '<div class="loading">Error loading drone data. Please try again later.</div>';
-            \});
+        // Function to load drones
+        function loadDrones() {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(function() { controller.abort(); }, 5000);
+
+            fetch('/api/management/drones', { signal: controller.signal })
+                .then(function(response) {
+                    clearTimeout(timeoutId);
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(function(drones) {
+                    const droneList = document.getElementById('droneList');
+                    if (drones && drones.length > 0) {
+                        droneList.innerHTML = drones.map(function(drone) {
+                            return '<div class="drone-card" id="drone-' + drone.id + '">' +
+                                '<h3>🚁 Drone #' + (drone.id || 'N/A') + '</h3>' +
+                                '<p><strong>Model:</strong> ' + (drone.model || 'Unknown') + '</p>' +
+                                '<p><strong>Location:</strong> ' + (drone.latitude || 0) + ', ' + (drone.longitude || 0) + '</p>' +
+                                '<p><strong>Battery:</strong> ' + (drone.batteryLevel || 0) + '%</p>' +
+                                '<span class="drone-status status-' + (drone.status || 'available').toLowerCase() + '">' +
+                                    (drone.status || 'AVAILABLE') +
+                                '</span>' +
+                                '<div style="margin-top: 15px;">' +
+                                    '<button onclick="editDrone(' + drone.id + ', \'' + (drone.model || '') + '\', \'' + (drone.status || 'AVAILABLE') + '\', ' + (drone.batteryLevel || 0) + ', ' + (drone.latitude || 0) + ', ' + (drone.longitude || 0) + ')" style="padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px;">Edit</button>' +
+                                    '<button onclick="deleteDrone(' + drone.id + ')" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 5px; cursor: pointer;">Delete</button>' +
+                                '</div>' +
+                            '</div>';
+                        }).join('');
+                    } else {
+                        droneList.innerHTML = '<div class="loading">No drones available</div>';
+                    }
+                })
+                .catch(function(error) {
+                    clearTimeout(timeoutId);
+                    console.error('Error fetching drones:', error);
+                    const droneList = document.getElementById('droneList');
+                    droneList.innerHTML = '<div class="loading" style="color: #f44336;">' +
+                        (error.name === 'AbortError' ?
+                            '⚠️ Request timeout - Management service may not be running' :
+                            '❌ Error loading drone data') + '<br>' +
+                        '<small>' + error.message + '</small><br>' +
+                        '<button onclick="loadDrones()" style="margin-top:10px;padding:8px 16px;cursor:pointer;">Retry</button>' +
+                        '</div>';
+                });
+        }
+
+        // Handle create drone form submission
+        document.getElementById('createDroneForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const messageDiv = document.getElementById('createDroneMessage');
+            messageDiv.innerHTML = '<div style="color: #2196F3;">Creating drone...</div>';
+
+            const droneData = {
+                model: document.getElementById('droneModel').value,
+                status: document.getElementById('droneStatus').value,
+                batteryLevel: parseInt(document.getElementById('droneBattery').value),
+                latitude: parseFloat(document.getElementById('droneLatitude').value),
+                longitude: parseFloat(document.getElementById('droneLongitude').value)
+            };
+
+            fetch('/api/management/drones', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(droneData)
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Failed to create drone');
+                return response.json();
+            })
+            .then(function(data) {
+                messageDiv.innerHTML = '<div style="color: #4caf50; background: #e8f5e9; padding: 10px; border-radius: 5px;">' +
+                    '✅ Drone created successfully! ID: ' + (data.id || 'N/A') +
+                    '</div>';
+                document.getElementById('createDroneForm').reset();
+                setTimeout(loadDrones, 1000);
+            })
+            .catch(function(error) {
+                messageDiv.innerHTML = '<div style="color: #f44336; background: #ffebee; padding: 10px; border-radius: 5px;">' +
+                    '❌ Error creating drone: ' + error.message +
+                    '</div>';
+            });
+        });
+
+        // Function to edit drone
+        function editDrone(id, model, status, batteryLevel, latitude, longitude) {
+            const newModel = prompt('Edit Model:', model);
+            if (newModel === null) return;
+
+            const newStatus = prompt('Edit Status (AVAILABLE/IN_FLIGHT/CHARGING/MAINTENANCE):', status);
+            if (newStatus === null) return;
+
+            const newBattery = prompt('Edit Battery Level (0-100):', batteryLevel);
+            if (newBattery === null) return;
+
+            const newLatitude = prompt('Edit Latitude:', latitude);
+            if (newLatitude === null) return;
+
+            const newLongitude = prompt('Edit Longitude:', longitude);
+            if (newLongitude === null) return;
+
+            const droneData = {
+                model: newModel || model,
+                status: newStatus.toUpperCase() || status,
+                batteryLevel: parseInt(newBattery) || batteryLevel,
+                latitude: parseFloat(newLatitude) || latitude,
+                longitude: parseFloat(newLongitude) || longitude
+            };
+
+            fetch('/api/management/drones/' + id, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(droneData)
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Failed to update drone');
+                return response.json();
+            })
+            .then(function(data) {
+                alert('Drone updated successfully!');
+                loadDrones();
+            })
+            .catch(function(error) {
+                alert('Error updating drone: ' + error.message);
+            });
+        }
+
+        // Function to delete drone
+        function deleteDrone(id) {
+            if (!confirm('Are you sure you want to delete drone #' + id + '?')) {
+                return;
+            }
+
+            fetch('/api/management/drones/' + id, {
+                method: 'DELETE'
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Failed to delete drone');
+                const droneCard = document.getElementById('drone-' + id);
+                if (droneCard) {
+                    droneCard.style.opacity = '0';
+                    setTimeout(function() {
+                        droneCard.remove();
+                    }, 300);
+                }
+            })
+            .catch(function(error) {
+                alert('Error deleting drone: ' + error.message);
+            });
+        }
+
+        // Load drones on page load
+        loadDrones();
     </script>
 </body>
 </html>

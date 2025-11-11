@@ -1,60 +1,56 @@
 package com.dronedelivery.frontend;
 
 import io.quarkus.security.Authenticated;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 @Path("/api/notifications")
 @Authenticated
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class NotificationProxyResource {
 
+    @Inject
+    @RestClient
+    NotificationServiceClient notificationServiceClient;
+
     @GET
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response getNotifications() {
-        // Mock data for now - will be replaced with actual service call
-        String mockNotifications = """
-            [
-                {
-                    "id": "NOTIF-001",
-                    "title": "Delivery Completed",
-                    "message": "Order #ORD-003 has been successfully delivered to customer Bob Johnson",
-                    "type": "success",
-                    "timestamp": "2025-11-03T12:15:00"
-                },
-                {
-                    "id": "NOTIF-002",
-                    "title": "Drone Maintenance Required",
-                    "message": "Drone DRONE-003 needs maintenance. Battery level critically low.",
-                    "type": "warning",
-                    "timestamp": "2025-11-03T11:45:00"
-                },
-                {
-                    "id": "NOTIF-003",
-                    "title": "New Order Received",
-                    "message": "New delivery order #ORD-004 has been assigned to Drone DRONE-001",
-                    "type": "info",
-                    "timestamp": "2025-11-03T11:30:00"
-                },
-                {
-                    "id": "NOTIF-004",
-                    "title": "Delivery Delayed",
-                    "message": "Order #ORD-002 is delayed due to weather conditions",
-                    "type": "warning",
-                    "timestamp": "2025-11-03T10:20:00"
-                },
-                {
-                    "id": "NOTIF-005",
-                    "title": "System Update",
-                    "message": "All systems are operational. Drone fleet is ready for operations.",
-                    "type": "success",
-                    "timestamp": "2025-11-03T09:00:00"
-                }
-            ]
-            """;
-        return Response.ok(mockNotifications).build();
+    public Response getAllNotifications() {
+        try {
+            return Response.ok(notificationServiceClient.getAllNotifications()).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                    .entity("{\"error\": \"Notification service unavailable: " + e.getMessage() + "\"}")
+                    .build();
+        }
+    }
+
+    @POST
+    public Response createNotification(NotificationDTO notificationDTO) {
+        try {
+            NotificationDTO created = notificationServiceClient.createNotification(notificationDTO);
+            return Response.status(Response.Status.CREATED).entity(created).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("{\"error\": \"Failed to create notification: " + e.getMessage() + "\"}")
+                    .build();
+        }
+    }
+
+    @DELETE
+    @Path("/{id}")
+    public Response deleteNotification(@PathParam("id") String id) {
+        try {
+            notificationServiceClient.deleteNotification(id);
+            return Response.noContent().build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("{\"error\": \"Failed to delete notification: " + e.getMessage() + "\"}")
+                    .build();
+        }
     }
 }
 

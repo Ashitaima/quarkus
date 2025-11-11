@@ -40,10 +40,42 @@ services:
     networks:
       - keycloak-network
 
+  postgres-app:
+    image: postgres:15
+    container_name: app-postgres-db
+    environment:
+      POSTGRES_DB: dronedelivery
+      POSTGRES_USER: droneuser
+      POSTGRES_PASSWORD: dronepass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_app_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  mongodb:
+    image: mongo:7.0
+    container_name: app-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mongouser
+      MONGO_INITDB_ROOT_PASSWORD: mongopass
+      MONGO_INITDB_DATABASE: notifications
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
 volumes:
   postgres_data:
+  postgres_app_data:
+  mongodb_data:
 
 networks:
   keycloak-network:
+    driver: bridge
+  app-network:
     driver: bridge
 

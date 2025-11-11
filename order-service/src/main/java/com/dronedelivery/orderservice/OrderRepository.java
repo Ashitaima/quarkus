@@ -1,42 +1,46 @@
-package com.dronedelivery.orderservice; // Ваш пакет
+package com.dronedelivery.orderservice;
 
+import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap; // Краще для доступу з різних потоків
 
-@ApplicationScoped // Робить цей клас доступним для ін'єкції
-public class OrderRepository {
+@ApplicationScoped
+public class OrderRepository implements PanacheRepository<Order> {
 
-    // Використаємо ConcurrentHashMap для "бази даних" в пам'яті
-    private Map<String, Order> orders = new ConcurrentHashMap<>();
-
-    public OrderRepository() {
-        // Додамо фейкові дані при старті
-        Order order1 = new Order("order-1", "customer-A", "вул. Хрещатик, 1");
-        Order order2 = new Order("order-2", "customer-B", "пл. Ринок, 10");
-        orders.put(order1.id, order1);
-        orders.put(order2.id, order2);
+    /**
+     * Знайти всі замовлення клієнта
+     */
+    public List<Order> findByCustomer(String customerName) {
+        return list("customerName", customerName);
     }
 
-    public List<Order> findAll() {
-        return new ArrayList<>(orders.values());
+    /**
+     * Знайти замовлення за статусом
+     */
+    public List<Order> findByStatus(OrderStatus status) {
+        return list("status", status);
     }
 
-    public Optional<Order> findById(String id) {
-        return Optional.ofNullable(orders.get(id));
+    /**
+     * Знайти активні замовлення (не доставлені та не скасовані)
+     */
+    public List<Order> findActiveOrders() {
+        return list("status != ?1 and status != ?2",
+                    OrderStatus.DELIVERED, OrderStatus.CANCELED);
     }
 
-    public void add(Order order) {
-        orders.put(order.id, order);
+    /**
+     * Підрахувати кількість замовлень клієнта
+     */
+    public long countByCustomer(String customerName) {
+        return count("customerName", customerName);
     }
 
-    // Метод для оновлення статусу замовлення
-    public Optional<Order> updateStatus(String id, OrderStatus newStatus) {
-        Optional<Order> orderOpt = findById(id);
-        orderOpt.ifPresent(order -> order.status = newStatus);
-        return orderOpt;
+    /**
+     * Знайти замовлення по частині адреси доставки
+     */
+    public List<Order> findByDestinationContaining(String partialAddress) {
+        return list("destination like ?1", "%" + partialAddress + "%");
     }
 }
+
