@@ -8,7 +8,8 @@ import java.time.LocalDateTime;
 public class Order {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "orders_seq")
+    @SequenceGenerator(name = "orders_seq", sequenceName = "orders_seq", allocationSize = 1)
     private Long id;
 
     @Column(name = "customer_name")

@@ -15,6 +15,9 @@ public class OrderResource {
     @Inject
     OrderRepository orderRepository;
 
+    @Inject
+    OrderEventProducer eventProducer;
+
     @GET
     public Response getAllOrders() {
         List<Order> orders = orderRepository.listAll();
@@ -38,6 +41,8 @@ public class OrderResource {
     @Transactional
     public Response createOrder(Order order) {
         orderRepository.persist(order);
+        // Publish order created event
+        eventProducer.publishOrderCreated(order);
         return Response.status(Response.Status.CREATED).entity(order).build();
     }
 
@@ -52,6 +57,8 @@ public class OrderResource {
             order.setWeight(updatedOrder.getWeight());
             order.setStatus(updatedOrder.getStatus());
             orderRepository.persist(order);
+            // Publish order updated event
+            eventProducer.publishOrderUpdated(order);
             return Response.ok(order).build();
         } else {
             return Response.status(Response.Status.NOT_FOUND)
@@ -71,6 +78,8 @@ public class OrderResource {
         if (order != null) {
             order.setStatus(newStatus);
             orderRepository.persist(order);
+            // Publish order status changed event
+            eventProducer.publishOrderStatusChanged(order);
             return Response.ok(order).build();
         } else {
             return Response.status(Response.Status.NOT_FOUND)
@@ -85,6 +94,8 @@ public class OrderResource {
     public Response deleteOrder(@PathParam("id") Long id) {
         boolean deleted = orderRepository.deleteById(id);
         if (deleted) {
+            // Publish order deleted event
+            eventProducer.publishOrderDeleted(id);
             return Response.noContent().build();
         } else {
             return Response.status(Response.Status.NOT_FOUND)
